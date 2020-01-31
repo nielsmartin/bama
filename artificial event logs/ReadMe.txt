@@ -1,0 +1,2 @@
+These artificial event logs form the basis for the evaluation of the Information Systems paper on the algorithm. 
+Further information regarding the use of the artificial event logs can be obtained by sending an e-mail to niels.martin@uhasselt.be
