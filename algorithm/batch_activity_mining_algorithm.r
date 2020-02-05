@@ -1234,11 +1234,22 @@ check_case_batching_relation <- function(activity_log, activity_set, within_case
       
       if(nrow(activity_log_subset) > 0){
         
+        # Determine whether case_batch_type is consistent over cases
+        n_distinct_case_batch_types <- length(unique(activity_log_subset$case_batch_type))
+        
         # Aggregate results and mark with apropriate type of case-based batching
-        activity_log_subset <- activity_log_subset %>% group_by(batch_number) %>%
-          summarize(case_ids = paste(case_id, collapse = "-"),
-                    row_ids = paste(case_row_ids, collapse = "-"),
-                    batch_subprocess_type = paste(case_batch_type[1], "case-based")) #case_batch_type is currently considered dominant
+        if(n_distinct_case_batch_types > 1){ # Incosistent case_batch_type over cases
+          activity_log_subset <- activity_log_subset %>% group_by(batch_number) %>%
+            summarize(case_ids = paste(case_id, collapse = "-"),
+                      row_ids = paste(case_row_ids, collapse = "-"),
+                      batch_subprocess_type = paste(case_batch_type[1], "case-based")) #case_batch_type is currently considered dominant
+        } else{ 
+          activity_log_subset <- activity_log_subset %>% group_by(batch_number) %>%
+            summarize(case_ids = paste(case_id, collapse = "-"),
+                      row_ids = paste(case_row_ids, collapse = "-"),
+                      batch_subprocess_type = paste("hybrid", "case-based")) #case_batch_type is currently considered dominant
+          
+        }
         
         # Add batch subprocess number
         activity_log_subset$batch_subprocess_number <- seq(batch_subprocess_number_start, batch_subprocess_number_start + nrow(activity_log_subset) - 1)
