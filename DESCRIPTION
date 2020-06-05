@@ -1,0 +1,29 @@
+Package: bama
+Title: Batch Behavior Identification for Event Logs
+Version: 1.14.0.9000
+Authors@R: 
+    c(person(given = "Niels",
+           family = "Martin",
+           role = c("aut", "cre"),
+           email = "niels.martin@uhasselt.be"),
+      person(given = "Felix",
+           family = "Mannhardt",
+           role = c("ctb"),
+           email = "felix.mannhardt@sintef.no")           
+      )
+Description: Algorithm to identify batching behavior in an event log (both at the task-resource and at the subprocess level)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    dplyr,
+    lubridate,
+    stringr,
+    tidyr,
+    arules,
+    arulesSequences,
+    bupaR,
+    rlang
+Suggests: 
+    testthat
+RoxygenNote: 7.1.0
