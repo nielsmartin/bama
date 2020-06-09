@@ -1,0 +1,41 @@
+---
+title: "Example: Use an XES file via bupaR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{example-xes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(bamalog)
+```
+
+
+Load one of the XES event logs  provided by the 'bupaR' package:
+```{r}
+library(bupaR)
+input_log <- patients
+head(input_log)
+```
+
+Alternative the 'xesreadR' package can be used to load a XES log:
+```{r eval=FALSE}
+log <- xesreadR::read_xes("eventlog.xes")
+```
+
+Call the bupaR compatible API:
+```{r}
+result_log <- detect_batching_log(input_log, show_progress = F)
+```
+```{r}
+library(kableExtra)
+kable(head(result_log))
+```

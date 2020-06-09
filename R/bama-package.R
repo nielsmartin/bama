@@ -14,4 +14,9 @@ NULL
 #' @import arulesSequences
 #' @importFrom arules `transactionInfo<-`
 #' @importFrom arules transactionInfo
+#' @importFrom stats setNames
+#' @importFrom stats start
+#' @importFrom utils setTxtProgressBar
+#' @importFrom utils timestamp
+#' @importFrom utils txtProgressBar
 NULL

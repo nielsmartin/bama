@@ -2,14 +2,22 @@
 # PART 3: SUPPORTING FUCTIONS FOR BATCH IDENTIFICATION
 ####################################################################
 
-# GENERATE SEQUENTIAL TOLERATED GAP LIST WHEN A SINGLE NUMERIC VALUE IS GIVEN
-# Function that creates a seq_tolerated_gap_list when a single numeric value (in seconds) is given
-seq_tolerated_gap_list_generator <- function(activity_log, seq_tolerated_gap_value){
+#' Generate Sequential Tolerated Gap List
+#'
+#' Function that creates a seq_tolerated_gap_list when a single numeric value (in seconds) is given.
+#'
+#' @param task_log The task log containing task or activity instances.
+#' @param seq_tolerated_gap_value This specifies the gap in seconds.
+#'
+#' @export
+seq_tolerated_gap_list_generator <- function(task_log,
+                                             seq_tolerated_gap_value){
+
   #If a list is already passed to the function, no further processing is required
   if(is.list(seq_tolerated_gap_value)){
     return(seq_tolerated_gap_value)
   } else{
-    activities <- unique(activity_log$activity)
+    activities <- unique(task_log$activity)
     seq_tolerated_gap_list <- list()
     seq_tolerated_gap_list <- c(seq_tolerated_gap_list, rep(seq_tolerated_gap_value, length(activities)))
     names(seq_tolerated_gap_list) <- activities
@@ -52,7 +60,7 @@ resource_active <- function(activity_log, res, start_tf, end_tf, act){
 # - timestamp_format: format in which the timestamps are specified
 # - numeric_timestamps: boolean indicating whether timestamps are expressed numerically (instead of in POSIXct format)
 # - log_and_model_based: boolean indicating whether a notion of the process model is present (i.e. whether arrival times are contained in the activity log)
-add_batching_information <- function(activity_log, seq_tolerated_gap_list,  timestamp_format = "yyyy-mm-dd hh:mm:ss", numeric_timestamps = TRUE, log_and_model_based){
+add_batching_information <- function(activity_log, seq_tolerated_gap_list,  timestamp_format = "yyyy-mm-dd hh:mm:ss", numeric_timestamps = TRUE, log_and_model_based, show_progress=T){
 
   # Convert timestamp format if required
   if(numeric_timestamps == FALSE){
@@ -202,7 +210,9 @@ add_batching_information <- function(activity_log, seq_tolerated_gap_list,  time
       # Change value of the sequential tolerated gap
       seq_tolerated_gap <- seq_tolerated_gap_list[[activity_log$activity[i]]]
     }
-    setTxtProgressBar(pb, i)
+    if (show_progress) {
+      setTxtProgressBar(pb, i)
+    }
   }
   close(pb)
 
@@ -228,7 +238,9 @@ add_batching_information <- function(activity_log, seq_tolerated_gap_list,  time
 # Parameters:
 # - activity_log: the activity log (subset) that needs to be investigated
 # - full_activity_log: the full activity log (required to determine whether activities immediately follow each other)
-detect_task_based_batch_subprocesses <- function(activity_log, full_activity_log){
+detect_task_based_batch_subprocesses <- function(activity_log,
+                                                 full_activity_log,
+                                                 show_progress = T){
 
   # # Initialize batch_subprocess column
   # activity_log$batch_subprocess <- NA
@@ -257,7 +269,7 @@ detect_task_based_batch_subprocesses <- function(activity_log, full_activity_log
 
       for(j in 1:(length(activities_to_check) - 1)){
 
-        rows_to_check_subset <- rows_to_check %>% filter(activity == activities_to_check[j] || activity == activities_to_check[j+1]) %>% arrange(case_id, start_num)
+        rows_to_check_subset <- rows_to_check %>% filter(activity == activities_to_check[j] | activity == activities_to_check[j+1]) %>% arrange(case_id, start_num)
 
         error_detected <- FALSE
         k <- 1
@@ -312,7 +324,9 @@ detect_task_based_batch_subprocesses <- function(activity_log, full_activity_log
         }
       }
 
-      setTxtProgressBar(pb, i)
+      if (show_progress) {
+        setTxtProgressBar(pb, i)
+      }
     }
     close(pb)
   }
@@ -344,15 +358,18 @@ activity_started <- function(activity_log, case, activities_to_exclude, interval
 }
 
 
-# IDENTIFY FREQUENT SEQUENCES
-# Function which identifies frequent sequences in traces using the SPADE algoritm (Sequential PAttern Discovery using Equivalence classes)
-# Parameters:
-# - activity_log: the activity log
-# - min_support: the minimal support level that needs to be obtained in order to consider a sequence as frequent
-identify_frequent_sequences <- function(activity_log, min_support){
+#' Identify frequent sequences
+#'
+#' Function which identifies frequent sequences in traces using the SPADE algoritm (Sequential PAttern Discovery using Equivalence classes)
+#'
+#' @param task_log The task log containing task or activity instances.
+#' @param min_support The minimal support level that needs to be obtained in order to consider a sequence as frequent.
+#'
+#' @export
+identify_frequent_sequences <- function(task_log, min_support){
 
   # Order activity log
-  activity_log <- activity_log %>%
+  activity_log <- task_log %>%
     arrange(case_id, start, complete)
 
   # Add row numbers for sequence
@@ -382,15 +399,19 @@ identify_frequent_sequences <- function(activity_log, min_support){
 }
 
 
-# ENUMERATE SUBSEQUENCES
-# Function which enumerates all subsequences observed within a trace
-# Parameters:
-# - activity_log: the activity log
-# - min_trace_freq: specifies the number of times that a trace needs to occur in the event log before it should be considered
-enumerate_subsequences <- function(activity_log, min_trace_freq = 0){
+#' Identify all sequence by enumeration
+#'
+#' Function which enumerates all subsequences observed within a trace
+#'
+#' @param task_log The task log containing task or activity instances.
+#' @param min_trace_freq This specifies the number of times that a trace needs to occur in the event log before it should be considered.
+#'
+#' @export
+enumerate_subsequences <- function(task_log,
+                                   min_trace_freq = 0){
 
   # Retrieve traces together with trace frequencies
-  traces <- activity_log %>% group_by(case_id) %>% summarize(trace = list(activity), trace_string = paste(activity, collapse = "-")) %>% group_by(trace_string) %>% summarize(trace_freq = n(), trace = trace[1], trace_length = length(trace[[1]]))
+  traces <- task_log %>% group_by(case_id) %>% summarize(trace = list(activity), trace_string = paste(activity, collapse = "-")) %>% group_by(trace_string) %>% summarize(trace_freq = n(), trace = trace[1], trace_length = length(trace[[1]]))
 
   # Remove infrequent traces
   if(min_trace_freq > 0){
