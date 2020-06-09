@@ -8,7 +8,7 @@ Authors@R:
            email = "niels.martin@uhasselt.be"),
       person(given = "Felix",
            family = "Mannhardt",
-           role = c("aut", "ctb"),
+           role = c("ctb"),
            email = "felix.mannhardt@sintef.no")           
       )
 Description: Algorithm to identify batching behavior in an event log (both at the task-resource and at the subprocess level)
