@@ -1,19 +1,26 @@
 
 #' @title Detect Batch Behavior in an Event Log
 #'
-#' @description TODO
+#' @description Detect batch behavior using the Bama algorithm based on a bupaR event log.
 #'
 #' @param log The `bupaR` event log object that should be animated
-#'
+#' @param act_seq_tolerated_gap_list List containing the tolerated time gap for a particular each activity (used for sequential batching detection)
+#' @param subsequence_type How to determine the subsequence list containing all sets of combinations for which case-based batching behavior will be detected. Either `enum` for exhaustive enumeration (which is often infeasible) or `mine` for using frequent sequence mining via the SPADE algoritm
+#' @param subsequence_min_support The minimum support require when using frequent sequence mining.
+#' @param seq_tolerated_gap The sequential tolerated gapfor each activity. Only when activity instances follow each other within that gap time, they will form a sequential batch. The default is 0.
+#' @param within_case_seq_tolerated_gap Tolerated time gap to detect sequential batching between activities within a particular case
+#' @param between_cases_seq_tolerated_gap Tolerated time gap to detect sequential batching between (aggregated) activities over several cases
+#' @param show_progress Whether to show a progress bar in the console.
 #'
 #' @export
-detect_batching <- function(log,
-                            subsequence_type = c("mine", "enum"),
-                            subsequence_min_support = 0.01,
-                            seq_tolerated_gap = 180,
-                            within_case_seq_tolerated_gap = seq_tolerated_gap,
-                            between_cases_seq_tolerated_gap = seq_tolerated_gap,
-                            arrival_event_gap = NULL) {
+detect_batching_log <- function(log,
+                                subsequence_type = c("mine", "enum"),
+                                subsequence_min_support = 0.01,
+                                seq_tolerated_gap = 0,
+                                within_case_seq_tolerated_gap = seq_tolerated_gap,
+                                between_cases_seq_tolerated_gap = seq_tolerated_gap,
+                                arrival_event_gap = NULL,
+                                show_progress=T) {
 
   subsequence_type <- match.arg(subsequence_type)
   has_arrival <- ("arrival" %in% colnames(log))
@@ -36,8 +43,7 @@ detect_batching <- function(log,
   # take a strict perspective and apply a sequential tolerated gap of 0 seconds for each activity (hence: only when
   # activity instances follow each other immediately, they will form a sequential batch). In real-life, this value is
   # likely to be too rigid.
-  seq_tolerated_gap_list <- seq_tolerated_gap_list_generator(activity_log = activity_log,
-                                                             seq_tolerated_gap_value = seq_tolerated_gap)
+  seq_tolerated_gap_list <- seq_tolerated_gap_list_generator(activity_log, seq_tolerated_gap)
 
   # CREATE SUBSEQUENCE LIST
   # The subsequence list contains all sets of combinations for which case-based batching behavior will be detected
@@ -68,15 +74,16 @@ detect_batching <- function(log,
   # - subsequence_type: reflects the way in which subsequences are generated: by enumeration (enum) or using a sequence mining method (mine)
   # - within_case_seq_tolerated_gap: tolerated time gap to detect sequential batching between activities within a particular case
   # - between_cases_seq_tolerated_gap: tolerated time gap to detect sequential batching between (aggregated) activities over several cases
-  activity_log <- detect_batching_behavior(activity_log = activity_log,
-                                           act_seq_tolerated_gap_list = seq_tolerated_gap_list,
-                                           timestamp_format = "yyyy-mm-dd hh:mm:ss",
-                                           numeric_timestamps = FALSE,
-                                           log_and_model_based = has_arrival,
-                                           subsequence_list = subsequence_list,
-                                           subsequence_type = subsequence_type,
-                                           within_case_seq_tolerated_gap = within_case_seq_tolerated_gap,
-                                           between_cases_seq_tolerated_gap = between_cases_seq_tolerated_gap)
+  activity_log <- detect_batching(task_log = activity_log,
+                                 act_seq_tolerated_gap_list = seq_tolerated_gap_list,
+                                 timestamp_format = "yyyy-mm-dd hh:mm:ss",
+                                 numeric_timestamps = FALSE,
+                                 log_and_model_based = has_arrival,
+                                 subsequence_list = subsequence_list,
+                                 subsequence_type = subsequence_type,
+                                 within_case_seq_tolerated_gap = within_case_seq_tolerated_gap,
+                                 between_cases_seq_tolerated_gap = between_cases_seq_tolerated_gap,
+                                 show_progress = show_progress)
 
   col_case <- bupaR::case_id(log)
   col_act <- bupaR::activity_id(log)

@@ -1,0 +1,107 @@
+---
+title: "Example: Experiments Synthetic Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{exp-synthetic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette shows how to replicate the experiments with the synthetic datasets that are described in the paper 'Detection of Batch Activities from Event Logs'. The synthetic datasets are included in this R package. First load the R package:
+
+```{r setup}
+library(bamalog)
+```
+
+Then, we need to load the CSV file from the package's `inst` folder:
+
+```{r}
+library(readr)
+csv_log <- read_csv2(system.file("extdata", "ANDGatewayVar1_conccasebased_processBatchActivityStats.csv", package = "bama"))
+```
+Some pre-processing is necessary due to the format that the simulation tool provides the CSV files:
+
+```{r}
+library(dplyr)
+
+# Edit csv_log arrival timestamps (for technical reasons of the simulator)
+if(!("PARALLEL" %in% unique(csv_log$Batch.Type))){
+  index <- is.na(csv_log$Natural.Arrival.Time)
+  csv_log$Arrival[index] <- csv_log$Natural.Arrival.Time[index]
+  remove(index)
+}
+csv_log$Natural.Arrival.Time <- NULL
+
+
+# Edit Batch.Number when different batch subprocesses are included in the process
+if("BatchSubProcess2" %in% csv_log$Cluster.Id){
+  index <- csv_log$Cluster.Id == "BatchSubProcess2"
+  csv_log$Batch.Number[index] <- csv_log$Batch.Number[index] + 0.5
+  remove(index)
+}
+
+task_log <- csv_log
+task_log$Cluster.Id <- NULL
+
+# Rename columns
+names(task_log) <- c("case_id", "activity", "arrival", "start", "complete", "resource", "input_batch_number", "input_batch_type")
+
+# Remove "Batch Activity" activities
+task_log <- task_log %>% filter(activity != "Batch Activity")
+
+# Remove process instances included in the last batch as this batch might be incomplete (and, hence, the artificial data might inappropriately be marked as a batch)
+instances_to_remove <- task_log %>% filter(input_batch_number == max(input_batch_number, na.rm = TRUE))
+instances_to_remove <- unique(instances_to_remove$case_id)
+task_log <- task_log %>% filter(!(case_id %in% instances_to_remove))
+remove(instances_to_remove)
+
+# Add instance_id (activity instance identifier) for comparison purposes later
+task_log$instance_id <- seq(1, nrow(task_log))
+
+# Save activity log with batch numbers and types for evaluation purposes
+evaluation_log <- task_log
+
+# Remove redundant columns for batch mining purposes
+task_log <- task_log %>% select(case_id, activity, arrival, start, complete, resource, instance_id)
+```
+
+Now directly call the main batch mining algorithm:
+
+
+```{r}
+# Create seq_tolerated_gap_list (gap of 0 seconds is allowed)
+seq_tolerated_gap_list <- seq_tolerated_gap_list_generator(task_log = task_log, 
+                                                           seq_tolerated_gap_value = 0)
+
+subsequence_list <- enumerate_subsequences(task_log, 0)
+# Use the following line for using frequent sequence mining instead
+# subsequence_list <- identify_frequent_sequences(task_log, 0)
+
+# Detect batching behavior
+result_log <- detect_batching(task_log = task_log,
+                             act_seq_tolerated_gap_list = seq_tolerated_gap_list,
+                             timestamp_format = "yyyy-mm-dd hh:mm:ss",
+                             numeric_timestamps = FALSE,
+                             log_and_model_based = TRUE,
+                             subsequence_list = subsequence_list,
+                             subsequence_type = "enum",
+                             # use `mine` to use frequence sequence mining
+                             # subsequence_type = "mine",
+                             within_case_seq_tolerated_gap = 0,
+                             between_cases_seq_tolerated_gap = 0,
+                             show_progress = F)
+```
+
+Inspect the resulting event log with batch annotations:
+
+```{r}
+library(kableExtra)
+kable(head(result_log, n = 25))
+```

@@ -3,32 +3,39 @@
 # PART 6: GENERIC BATCH DETECTION FUNCTION
 ####################################################################
 
-# GENERIC BATCH DETECTION FUNCTION (builds upon functions defined in other parts)
-# Note: seq_tolerated_gap is specified in seconds
-# Parameters:
-# - activity_log: the activity log
-# (1) Parameters to detect batching behavior at the resource-activity level
-# - act_seq_tolerated_gap_list: list containing the tolerated time gap for a particular each activity (used for sequential batching detection)
-# - timestamp_format: format in which the timestamps are specified
-# - numeric_timestamps: boolean indicating whether timestamps are expressed numerically (instead of in POSIXct format)
-# - log_and_model_based: boolean indicating whether a notion of the process model is present (i.e. whether arrival times are contained in the activity log)
-# (2) Parameters to detect case-based sequential/concurrent batch subprocesses
-# - subsequence_list: list of subsequences for which case-based sequential/concurrent batching needs to be checked
-# - subsequence_type: reflects the way in which subsequences are generated: by enumeration (enum) or using a sequence mining method (mine)
-# - within_case_seq_tolerated_gap: tolerated time gap to detect sequential batching between activities within a particular case
-# - between_cases_seq_tolerated_gap: tolerated time gap to detect sequential batching between (aggregated) activities over several cases
-
-
+#' @title Detect Batch Behavior in a Task Log
 #'
+#' @description Detect batch behavior using the Bama algorithm based on a plain task log.
+#'
+#' @param task_log The task log containing task or activity instances.
+#' @param act_seq_tolerated_gap_list List containing the tolerated time gap for a particular each activity (used for sequential batching detection)
+#' @param timestamp_format Format in which the timestamps are specified
+#' @param numeric_timestamps Boolean indicating whether timestamps are expressed numerically (instead of in POSIXct format)
+#' @param log_and_model_based Boolean indicating whether a notion of the process model is present (i.e. whether arrival times are contained in the activity log)
+#' @param subsequence_list List of subsequences for which case-based sequential/concurrent batching needs to be checked
+#' @param subsequence_type Reflects the way in which subsequences are generated: by enumeration (enum) or using a sequence mining method (mine)
+#' @param within_case_seq_tolerated_gap Tolerated time gap to detect sequential batching between activities within a particular case
+#' @param between_cases_seq_tolerated_gap Tolerated time gap to detect sequential batching between (aggregated) activities over several cases
+#' @param show_progress Whether to show a progress bar in the console.
 #'
 #' @export
-detect_batching_behavior <- function(activity_log, act_seq_tolerated_gap_list,  timestamp_format = "yyyy-mm-dd hh:mm:ss", numeric_timestamps = TRUE, log_and_model_based,
-                                     subsequence_list, subsequence_type, within_case_seq_tolerated_gap = 0, between_cases_seq_tolerated_gap = 0){
+detect_batching <- function(task_log,
+                           act_seq_tolerated_gap_list,
+                           timestamp_format = "yyyy-mm-dd hh:mm:ss",
+                           numeric_timestamps = TRUE,
+                           log_and_model_based,
+                           subsequence_list,
+                           subsequence_type,
+                           within_case_seq_tolerated_gap = 0,
+                           between_cases_seq_tolerated_gap = 0,
+                           show_progress = T){
+
+  activity_log <- task_log
 
   ### ADD BASIC BATCHING INFORMATION (RESOURCE-ACTIVITY LEVEL)
   # After testing, a custom-version of this function can be made in which, e.g., the removal of start_num etc. is removed (as this is used later in the function)
   print("Detecting batching behavior at the resource-activity level (phase 1 of 3)...")
-  activity_log <- add_batching_information(activity_log, act_seq_tolerated_gap_list, timestamp_format, numeric_timestamps, log_and_model_based)
+  activity_log <- add_batching_information(activity_log, act_seq_tolerated_gap_list, timestamp_format, numeric_timestamps, log_and_model_based, show_progress)
 
   ### PREPARATORY STEPS
 
@@ -60,7 +67,7 @@ detect_batching_behavior <- function(activity_log, act_seq_tolerated_gap_list,  
   # batching is present for the individual activities of which the subprocess exists
   print("Detecting parallel, task-based sequential and task-based concurrent batch subprocesses (phase 2 of 3)...")
   if(nrow(activity_log_ss1) > 0){
-    activity_log_ss1 <- detect_task_based_batch_subprocesses(activity_log_ss1, activity_log)
+    activity_log_ss1 <- detect_task_based_batch_subprocesses(activity_log_ss1, activity_log, show_progress)
   }
 
   # Determine next batch_subprocess_number
@@ -145,7 +152,9 @@ detect_batching_behavior <- function(activity_log, act_seq_tolerated_gap_list,  
           }
 
         }
-        setTxtProgressBar(pb, i)
+        if (show_progress) {
+          setTxtProgressBar(pb, i)
+        }
       }
       close(pb)
 
@@ -184,7 +193,9 @@ detect_batching_behavior <- function(activity_log, act_seq_tolerated_gap_list,  
           remove(index)
         }
 
-        setTxtProgressBar(pb, i)
+        if (show_progress) {
+          setTxtProgressBar(pb, i)
+        }
       }
       close(pb)
 

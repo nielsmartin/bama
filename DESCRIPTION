@@ -1,6 +1,6 @@
-Package: bama
+Package: bamalog
 Title: Batch Behavior Identification for Event Logs
-Version: 1.14.0.9000
+Version: 1.14.0
 Authors@R: 
     c(person(given = "Niels",
            family = "Martin",
@@ -25,5 +25,11 @@ Imports:
     bupaR,
     rlang
 Suggests: 
-    testthat
+    testthat (>= 2.1.0),
+    eventdataR,
+    knitr,
+    rmarkdown,
+    kableExtra,
+    readr
 RoxygenNote: 7.1.0
+VignetteBuilder: knitr

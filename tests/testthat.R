@@ -1,4 +1,4 @@
 library(testthat)
-library(bama)
+library(bamalog)
 
-test_check("bama")
+test_check("bamalog")
